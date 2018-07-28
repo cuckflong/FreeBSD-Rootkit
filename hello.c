@@ -20,7 +20,7 @@ static int load(struct module *module, int cmd, void *arg) {
             break;
     }
 
-    return error;
+    return(error);
 }
 
 static moduledata_t hello_mod = {
@@ -29,4 +29,4 @@ static moduledata_t hello_mod = {
     NULL
 };
 
-DECLARE_MODULE("hello", hello_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
+DECLARE_MODULE(hello, hello_mod, SI_SUB_DRIVERS, SI_ORDER_MIDDLE);
