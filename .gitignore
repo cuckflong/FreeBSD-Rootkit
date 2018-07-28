@@ -53,3 +53,8 @@ dkms.conf
 
 #Extra Shit
 .vscode/
+x86
+machine
+*.o
+*.ko
+export_syms
