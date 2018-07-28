@@ -1,5 +1,5 @@
 KMOD= 	hello
 SRCS=	hello.c
-SYSDIR=	../head/sys
+SYSDIR=	../sys
 
 .include <bsd.kmod.mk>
