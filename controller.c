@@ -13,7 +13,8 @@ int main(int argc, char *argv[]) {
 		printf("Usage:\n%s <option>\n", argv[0]);
 		exit(0);	
 	}
-
+	
+	printf("Syscall num: %d\n", modfind("rootkit"));
 	if (syscall(SYSCALL_NUM, argv[1]) == -1) {
 		printf("System call failed, check if kernel module is loaded\n");
 		return -1;	
