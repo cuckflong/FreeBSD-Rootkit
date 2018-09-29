@@ -22,7 +22,7 @@
 #include <sys/file.h>
 #include <sys/fcntl.h>
 
-#include <sys/stdio.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 
