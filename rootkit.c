@@ -66,7 +66,10 @@ struct module {
     void                *arg;    
     modspecific_t        data;    
 };
+
 static int last_kld = -1;
+static struct linker_file *save_lf;
+static struct module *save_mod;
 //============================
 
 #define ORIGINAL	"/sbin/hello"
