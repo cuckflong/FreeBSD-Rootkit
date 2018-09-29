@@ -33,10 +33,27 @@
 
 extern linker_file_list_t linker_files;
 extern struct sx kld_sx;
-extern modulelist_t modules;
-extern int nextid;
+extern int next_file_id;
+
+#define    LINKER_GET_NEXT_FILE_ID(a) do {          \
+    linker_file_t lftmp;                            \
+                                                    \
+    if (!cold)                                      \
+        sx_assert(&kld_sx, SA_XLOCKED);             \
+retry:                                              \
+    TAILQ_FOREACH(lftmp, &linker_files, link) {     \
+        if (next_file_id == lftmp->id) {            \
+            next_file_id++;                         \
+            goto retry;                             \
+        }                                           \
+    }                                               \
+    (a) = next_file_id;                             \
+} while(0)
+
 
 typedef TAILQ_HEAD(, module) modulelist_t;
+extern modulelist_t modules;
+extern int nextid;
 
 struct module {
     TAILQ_ENTRY(module)    link;    
@@ -49,7 +66,7 @@ struct module {
     void                *arg;    
     modspecific_t        data;    
 };
-
+static int last_kld = -1;
 //============================
 
 #define ORIGINAL	"/sbin/hello"
