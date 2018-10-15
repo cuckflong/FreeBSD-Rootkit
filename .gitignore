@@ -58,3 +58,4 @@ machine
 *.o
 *.ko
 export_syms
+upload
