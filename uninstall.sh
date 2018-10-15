@@ -1,6 +1,6 @@
 #!/bin/sh
 
-controller off
+#controller off
 rm /sbin/controller
 rm /sbin/priv_esc
 rm /log.txt

