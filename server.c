@@ -16,6 +16,8 @@ int main(int argc , char *argv[])
      
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+    if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 }, sizeof(int)) < 0)
+        error("setsockopt(SO_REUSEADDR) failed");
     if (socket_desc == -1)
     {
         printf("Could not create socket");
@@ -57,11 +59,10 @@ int main(int argc , char *argv[])
     while( (read_size = recv(client_sock , client_message , 2000 , 0)) > 0 )
     {
         //Send the message back to client
-        write(client_sock , client_message , strlen(client_message));
         printf(client_message);
         fprintf(log, client_message, 100);
     }
-     
+
     if(read_size == 0)
     {
         puts("Client disconnected");
