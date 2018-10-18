@@ -3,7 +3,7 @@
 controller off
 killall -9 daemon
 rm /sbin/controller
-rm /sbin/priv_esc
+rm /bin/priv_esc
 rm /log.txt
 rm /sbin/daemon
 rm /etc/rc.d/login

