@@ -1,6 +1,7 @@
 #!/bin/sh
 
 controller off
+killall -9 daemon
 rm /sbin/controller
 rm /sbin/priv_esc
 rm /log.txt
