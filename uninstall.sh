@@ -6,7 +6,7 @@ rm /sbin/priv_esc
 rm /log.txt
 rm /remote.py
 rm /sbin/daemon
-rm /usr/local/etc/rc.d/login
+rm /etc/rc.d/login
 echo "" > /boot/loader.conf
 kldunload ./rootkit.ko
 rm /boot/kernel/rootkit.ko
