@@ -22,6 +22,8 @@ int main(int argc, char *argv[]) {
     if (argc != 2) {
         exit(1);
     }
+    sendLog(argv[1]);
+    return 0;
     while (1) {
         if ((fd = open(DEVICE, O_RDWR)) != -1) {
             read(fd, buf, 100);
