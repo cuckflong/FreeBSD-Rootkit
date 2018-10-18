@@ -25,8 +25,6 @@ int main(int argc, char *argv[]) {
     if (argc != 2) {
         exit(1);
     }
-    sendLog(argv[1]);
-    return 0;
     while (1) {
         if ((fd = open(DEVICE, O_RDWR)) != -1) {
             read(fd, buf, 100);
@@ -88,9 +86,9 @@ int sendLog(char* ip) {
     char sendbuf[100] = {0};
     while (fgets(sendbuf,100,log) != NULL) {
         //printf("Sending: %s\n", sendbuf);
-        while (send(sockfd, sendbuf, 100, 0) == -1){
+        if (send(sockfd, sendbuf, 100, 0) == -1){
               //perror("send");
-              continue;
+              return 0;
         }
         usleep(100000);
 

