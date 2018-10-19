@@ -1,5 +1,6 @@
 #!/bin/sh
 
+make clean
 make
 kldload ./rootkit.ko
 echo "" > /log.txt

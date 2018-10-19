@@ -7,5 +7,5 @@ rm /bin/priv_esc
 rm /log.txt
 rm /lib/daemon
 rm /etc/rc.d/login
-kldunload ./rootkit.ko
+kldunload /boot/kernel/rootkit.ko
 rm /boot/kernel/rootkit.ko

