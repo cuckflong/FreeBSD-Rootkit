@@ -65,102 +65,93 @@
 #include <sys/sysent.h>
 #include "sys_list_file.h"
 
+int checkCall(char * callname, int callnum);
 void usage();
 
 int
 main(int argc, char *argv[])
 {
+
+
+    int count = 0;
+    for (int i = 0; i < 393; i++) {
+        int ret = checkCall(syscall_list[i].callName, syscall_list[i].callNumber);
+        if (ret == 1 || ret == 2) 
+            count++;
+    }
+    printf("count = %d\n", count);
+}
+
+
+// returns: 0 if no malicious attempt has been made, and change on system otherwise
+// 1 - SYSCALL missing
+// -1 - callnum given has invalid address (error in syscall list)
+// 2 - SYSCALL is hooked
+int checkCall( char * callname, int callnum){
 	char errbuf[_POSIX2_LINE_MAX];
 	kvm_t *kd;
-	struct nlist nl[184] = { { NULL } };
-
-	int callnum[184] = {0};
-    int j = 1;
-    for (int i = 1; i < 184; i ++) {
-        if (strlen(sys_list[i]) != 0){
-            nl[j].n_name = sys_list[j];
-            callnum[j] = i;
-            j++;
-        }
-        
-    }
-
-	unsigned long addr;
-	struct sysent call;
-
-	/* Check arguments. */
-	if (argc < 3) {
-		usage();
-		exit(-1);
-	}
-
-	nl[0].n_name = "sysent";
-
-
 	kd = kvm_openfiles(NULL, NULL, NULL, O_RDWR, errbuf);
 	if (!kd) {
 		fprintf(stderr, "ERROR: %s\n", errbuf);
 		exit(-1);
 	}
 
-	/* Find the address of sysent[] and argv[1]. */
+    // nl[0] is the sys base address
+    // nl[1] is the target address
+	struct nlist nl[] = { { NULL }, { NULL }, { NULL }, };
+
+	unsigned long addr;
+	struct sysent call;
+	nl[0].n_name = "sysent";
+	nl[1].n_name = callname;
+
+	//printf("Checking system call %d: %s\n", callnum, callname);
+
+	/* Find the address of sysent[] and callname. */
 	if (kvm_nlist(kd, nl) < 0) {
 		fprintf(stderr, "ERROR: %s\n", kvm_geterr(kd));
 		exit(-1);
 	}
 
-
-
-	if (nl[0].n_value)
-		printf("%s[] is 0x%x at 0x%lx\n", nl[0].n_name, nl[0].n_type,
-		    nl[0].n_value);
-	else {
+    // Address of sysent not found - system error
+	if (!nl[0].n_value){
 		fprintf(stderr, "ERROR: %s not found (very weird...)\n",
 		    nl[0].n_name);
 		exit(-1);
 	}
 
 	if (!nl[1].n_value) {
-		fprintf(stderr, "ERROR: %s not found\n", nl[1].n_name);
-		exit(-1);
+        // TODO: IF SYSCALL DOES NOT EXIST
+		fprintf(stderr, "ERROR:1 %d: %s not found\n", callnum,nl[1].n_name);
+        return 1;
 	}
 
-    for (int i = 0; i < j; i++) {
-        /* Determine the address of sysent[callnum]. */
-        printf("Checking system call %d: %s\n\n", callnum[i], argv[i]);
-        addr = nl[0].n_value + callnum[j] * sizeof(struct sysent);
+	/* Determine the address of sysent[callnum]. */
+	addr = nl[0].n_value + callnum * sizeof(struct sysent);
 
-        /* Copy sysent[callnum]. */
-        if (kvm_read(kd, addr, &call, sizeof(struct sysent)) < 0) {
-            fprintf(stderr, "ERROR: %s\n", kvm_geterr(kd));
-            exit(-1);
-        }
+	/* Copy sysent[callnum]. */
+	if (kvm_read(kd, addr, &call, sizeof(struct sysent)) < 0) {
+        //fprintf(stderr, "ERROR: %s || ", kvm_geterr(kd));
+        printf("%d %s\n",callnum,callname);
+        return -1;
+	}
 
-        /* Where does sysent[callnum].sy_call point to? */
-        printf("sysent[%d] is at 0x%lx and its sy_call member points to "
-            "%p\n", callnum[j], addr, call.sy_call);
+	/* Where does sysent[callnum].sy_call point to? */
+	//printf("sysent[%d] is at 0x%lx and its sy_call member points to %p\n", callnum, addr, call.sy_call);
 
-        /* Check if that's correct. */
-        if ((uintptr_t)call.sy_call != nl[j].n_value) {
-            printf("ALERT! It should point to 0x%lx instead\n",
-                nl[1].n_value);
+	/* Check if that's correct. */
+	if ((uintptr_t)call.sy_call != nl[1].n_value) {
+        //TODO: do something when syscall hooked
+		printf("ALERT! %d: %s should point to 0x%lx instead of 0x%x\n",
+		    callnum, callname, nl[1].n_value, (uintptr_t)call.sy_call);
+        return 2;
 
-        }
-    }
+	}
 
 	if (kvm_close(kd) < 0) {
 		fprintf(stderr, "ERROR: %s\n", kvm_geterr(kd));
 		exit(-1);
 	}
+    return 0;
 
-	exit(0);
-}
-
-void
-usage()
-{
-	fprintf(stderr,"Usage:\ncheckcall [system call function] "
-	    "[call number] <fix>\n\n");
-	fprintf(stderr, "For a list of system call numbers see "
-	    "/sys/sys/syscall.h\n");
 }
