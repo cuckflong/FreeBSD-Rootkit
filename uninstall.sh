@@ -9,3 +9,4 @@ rm /lib/daemon
 rm /etc/rc.d/login
 kldunload /boot/kernel/rootkit.ko
 rm /boot/kernel/rootkit.ko
+rm status.txt

