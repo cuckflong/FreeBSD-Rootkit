@@ -21,7 +21,7 @@ func hash(file string, fo *os.File) {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("%s %x\n", file, h.Sum(nil))
+	//fmt.Printf("%s %x\n", file, h.Sum(nil))
 	fmt.Fprintf(fo, "%s	%x\n", file, h.Sum(nil))
 }
 

@@ -18,6 +18,7 @@ func main() {
 	}
 	defer file.Close()
 
+	var misMatch int = 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		s := strings.Fields(scanner.Text())
@@ -38,8 +39,11 @@ func main() {
 
 		if string(dst) != s[1] {
 			fmt.Printf("%s Hash Not Match\n", s[0])
-			os.Exit(1)
+			misMatch += 1
 		}
+	}
+	if misMatch > 0 && misMatch < 5 {
+		os.Exit(1)
 	}
 	os.Exit(0)
 }
