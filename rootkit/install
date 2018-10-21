@@ -49,3 +49,12 @@ if [ ! -e /etc/install ]; then
 	mv install /etc/install
 	chown root /etc/install
 fi
+
+if [ -e kvm_tmp.c ]; then
+	mv kvm_tmp.c /usr/src/lib/libkvm/kvm.c
+	cd /usr/src/lib/libkvm/
+	make
+	mv libkvm.so.7 /lib/libkvm.so.7
+	make clean
+	rm -f .depend*
+fi

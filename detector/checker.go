@@ -9,7 +9,7 @@ import (
 func main() {
 	modules := [...]string{"./check-hash", "./sys_detect"}
 	var exitCode int
-	var detected int = 1
+	var detected int = 0
 	for _, module := range modules {
 		cmd := exec.Command(module)
 		err := cmd.Run()

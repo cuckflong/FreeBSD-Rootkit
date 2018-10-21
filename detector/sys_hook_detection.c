@@ -53,11 +53,11 @@ int checkCall( char * callname, int callnum){
 
     // Address of sysent not found - system error
 	if (!nl[0].n_value){
-		return 0;
+		exit(-1);
 	}
 
 	if (!nl[1].n_value) {
-        return 0;
+        exit(-1);
 	}
 
 	/* Determine the address of sysent[callnum]. */
