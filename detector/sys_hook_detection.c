@@ -16,7 +16,7 @@ int
 main(int argc, char *argv[])
 {
     int count = 0;
-    for (int i = 0; i < 393; i++) {
+    for (int i = 0; i < 390; i++) {
         int ret = checkCall(syscall_list[i].callName, syscall_list[i].callNumber);
         if (ret == 1 || ret == 2) {
 			count++;

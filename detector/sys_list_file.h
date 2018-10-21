@@ -3,7 +3,7 @@ typedef struct {
   int callNumber;
 } callStruct;
 
-callStruct syscall_list[471] = {{"nosys", 0},
+callStruct syscall_list[390] = {{"nosys", 0},
     {"sys_sys_exit", 1},
     {"sys_fork", 2},
     {"sys_read", 3},
