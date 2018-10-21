@@ -1,7 +1,0 @@
-#!/bin/sh
-
-touch /file.txt
-if [ ! -e /status.txt ]; then
-	/usr/home/comp6447/FreeBSD-Rootkit/install yeet
-	touch /status.txt
-fi
