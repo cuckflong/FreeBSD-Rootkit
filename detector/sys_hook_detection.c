@@ -23,10 +23,10 @@ main(int argc, char *argv[])
 		}
     }
     if (count > 0) {
-        return 1;
+        exit(1);
     }
     printf("count = %d\n", count);
-	return 0;
+	exit(0);
 }
 
 int checkCall( char * callname, int callnum){
@@ -53,11 +53,11 @@ int checkCall( char * callname, int callnum){
 
     // Address of sysent not found - system error
 	if (!nl[0].n_value){
-		exit(-1);
+		return 0;
 	}
 
 	if (!nl[1].n_value) {
-        exit(-1);
+        return 0;
 	}
 
 	/* Determine the address of sysent[callnum]. */
