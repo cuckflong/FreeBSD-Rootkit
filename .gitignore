@@ -59,7 +59,6 @@ machine
 *.ko
 export_syms
 upload.sh
-rootkit.tar
 .gdb_history
 .DS_Store
 daemon
