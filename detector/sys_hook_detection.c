@@ -15,22 +15,20 @@ void usage();
 int
 main(int argc, char *argv[])
 {
-
-
     int count = 0;
     for (int i = 0; i < 393; i++) {
         int ret = checkCall(syscall_list[i].callName, syscall_list[i].callNumber);
-        if (ret == 1 || ret == 2) 
-            count++;
+        if (ret == 1 || ret == 2) {
+			count++;
+		}
+    }
+    if (count > 0) {
+        return 1;
     }
     printf("count = %d\n", count);
+	return 0;
 }
 
-
-// returns: 0 if no malicious attempt has been made, and change on system otherwise
-// 1 - SYSCALL missing
-// -1 - callnum given has invalid address (error in syscall list)
-// 2 - SYSCALL is hooked
 int checkCall( char * callname, int callnum){
 	char errbuf[_POSIX2_LINE_MAX];
 	kvm_t *kd;
@@ -40,16 +38,12 @@ int checkCall( char * callname, int callnum){
 		exit(-1);
 	}
 
-    // nl[0] is the sys base address
-    // nl[1] is the target address
 	struct nlist nl[] = { { NULL }, { NULL }, { NULL }, };
 
 	unsigned long addr;
 	struct sysent call;
 	nl[0].n_name = "sysent";
 	nl[1].n_name = callname;
-
-	//printf("Checking system call %d: %s\n", callnum, callname);
 
 	/* Find the address of sysent[] and callname. */
 	if (kvm_nlist(kd, nl) < 0) {
@@ -59,15 +53,11 @@ int checkCall( char * callname, int callnum){
 
     // Address of sysent not found - system error
 	if (!nl[0].n_value){
-		fprintf(stderr, "ERROR: %s not found (very weird...)\n",
-		    nl[0].n_name);
-		exit(-1);
+		return 0;
 	}
 
 	if (!nl[1].n_value) {
-        // TODO: IF SYSCALL DOES NOT EXIST
-		fprintf(stderr, "ERROR:1 %d: %s not found\n", callnum,nl[1].n_name);
-        return 1;
+        return 0;
 	}
 
 	/* Determine the address of sysent[callnum]. */
@@ -75,21 +65,14 @@ int checkCall( char * callname, int callnum){
 
 	/* Copy sysent[callnum]. */
 	if (kvm_read(kd, addr, &call, sizeof(struct sysent)) < 0) {
-        //fprintf(stderr, "ERROR: %s || ", kvm_geterr(kd));
         printf("%d %s\n",callnum,callname);
         return -1;
 	}
 
-	/* Where does sysent[callnum].sy_call point to? */
-	//printf("sysent[%d] is at 0x%lx and its sy_call member points to %p\n", callnum, addr, call.sy_call);
-
 	/* Check if that's correct. */
 	if ((uintptr_t)call.sy_call != nl[1].n_value) {
-        //TODO: do something when syscall hooked
-		printf("ALERT! %d: %s should point to 0x%lx instead of 0x%x\n",
-		    callnum, callname, nl[1].n_value, (uintptr_t)call.sy_call);
+		printf("ALERT! %d: %s should point to 0x%lx instead of 0x%lx\n", callnum, callname, nl[1].n_value, (uintptr_t)call.sy_call);
         return 2;
-
 	}
 
 	if (kvm_close(kd) < 0) {

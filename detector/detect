@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cc sys_hook_detection.c -lkvm -o sys_detect
+./checker
+exit $?
