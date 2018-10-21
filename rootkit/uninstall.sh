@@ -12,4 +12,5 @@ fi
 rm -f /sbin/controller /bin/priv_esc /log.txt /lib/daemon /etc/install elevate
 kldunload /boot/kernel/rootkit.ko
 rm -f /boot/kernel/rootkit.ko
+mv /lib/.libkvm /lib/libkvm.so.7
 rm uninstall.sh

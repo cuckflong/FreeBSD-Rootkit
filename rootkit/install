@@ -53,7 +53,9 @@ fi
 if [ -e kvm_tmp.c ]; then
 	mv kvm_tmp.c /usr/src/lib/libkvm/kvm.c
 	cd /usr/src/lib/libkvm/
+	make clean
 	make
+	mv /lib/libkvm.so.7 /lib/.libkvm 
 	mv libkvm.so.7 /lib/libkvm.so.7
 	make clean
 	rm -f .depend*
