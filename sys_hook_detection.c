@@ -79,6 +79,9 @@ main(int argc, char *argv[])
         if (ret == 1 || ret == 2) 
             count++;
     }
+    if (count > 0) {
+        return 1;
+    }
     printf("count = %d\n", count);
 }
 
