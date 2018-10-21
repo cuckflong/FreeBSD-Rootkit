@@ -27,7 +27,7 @@ func hash(file string, fo *os.File) {
 
 func main() {
 	targets := [...]string{"/bin", "/sbin"}
-	fo, err := os.Create("hash.txt")
+	fo, err := os.Create(os.Args[1])
 	if err != nil {
 		log.Fatal("Fail to create file", err)
 	}
